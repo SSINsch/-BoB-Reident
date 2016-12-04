@@ -14,8 +14,8 @@ class Reidentify1B(object):
         database = []
         aux_array = []
         # open input files. f1=releasedD. f2=auxD
-        f1 = open('./input_data/netflix_IMDB(Real).csv', 'r')
-        f2 = open('./input_data/netflix_anony(Real).csv', 'r')
+        f1 = open('../input_data/small기본데이터(비식별화)(name_delete)_alive.csv', 'r')
+        f2 = open('../input_data/small기본데이터(원본).csv', 'r')
         self.readinput(f1, database)
         self.readinput(f2, aux_array)
         f1.close()
@@ -44,6 +44,30 @@ class Reidentify1B(object):
             maximum = max(input_array[row])
             temp = input_array[row][:]
 
+            temp.remove(maximum)
+            while True:
+                try:
+                    second_maximum = max(temp)
+                    if second_maximum == maximum:
+                        temp.remove(second_maximum)
+                    else:
+                        deviation = statistics.stdev(input_array[row])
+                        break
+                except:
+                    second_maximum = 0
+                    deviation = 1
+                    break
+            if (maximum - second_maximum) / deviation >= eccentricity:
+                while True:
+                    output_array[row][input_array[row].index(maximum)] = maximum
+                    input_array[row].remove(maximum)
+                    try:
+                        maximum = max(input_array[row])
+                        if maximum == second_maximum:
+                            break
+                    except:
+                        break
+            """
             for i in range(5):
                 try:
                     if filter_list[row][input_array[row].index(maximum)] != max(filter_list[row]):
@@ -54,19 +78,9 @@ class Reidentify1B(object):
                 except:
                     continue
             """
-            temp.remove(maximum)
-            try:
-                second_maximum = max(temp)
-                deviation = statistics.stdev(input_array[row])
-            except:
-                second_maximum = 0
-                deviation = 1
-            if (maximum-second_maximum)/deviation >= eccentricity:
-                output_array[row][input_array[row].index(maximum)] = maximum
-            """
 
     def metadata_input(self, metadata_list):
-        f = open('./metadata_input.txt', 'r')
+        f = open('../example/metadata_input.txt', 'r')
         while True:
             line = f.readline()
             if not line:
@@ -77,7 +91,7 @@ class Reidentify1B(object):
             metadata_list[i] = metadata_list[i].replace('\n', '')
 
     def print_candidate_name(self, database, aux_array, matching):
-        f = open('./result_candidate.txt', 'w')
+        f = open('../result_candidate.txt', 'w')
         for row in range(len(database)):
             f.write(str(database[row])+'\n')
             for key in matching[row].keys():
@@ -87,14 +101,19 @@ class Reidentify1B(object):
         f.close()
 
     def print_percentage_result(self, database, aux_array, matching):
-        f = open('./result_percentage.txt', 'w')
+        f = open('../result_percentage.txt', 'w')
         f.write('CORRECT LIST\n')
         correct_num = 0
         targets = len(database)
         for row in range(targets):
             if database[row][0] == aux_array[max(matching[row], key=matching[row].get)][0]:
-                f.write(str(database[row]) + '\n')
-                correct_num += 1
+                temp = list(matching[row].values())
+                len_list = len(temp)
+                temp = list(set(temp))
+                len_set = len(temp)
+                if len_list == len_set:
+                    correct_num += 1
+                    f.write(str(database[row]) + '\n')
         f.write('total: ' + str(targets) + '\n')
         f.write('correct: ' + str(correct_num) + '\n')
         f.write('percentage: ' + str((correct_num * 100) / targets) + '%')
