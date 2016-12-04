@@ -14,8 +14,8 @@ class Reidentify1B(object):
         database = []
         aux_array = []
         # open input files. f1=releasedD. f2=auxD
-        f1 = open('../input_data/small기본데이터(비식별화)(name_delete)_alive.csv', 'r')
-        f2 = open('../input_data/small기본데이터(원본).csv', 'r')
+        f2 = open('../input_data/산업군_정보통신(비식별화)_alive.csv', 'r')
+        f1 = open('../input_data/산업군_교육(비식별화)_alive.csv', 'r')
         self.readinput(f1, database)
         self.readinput(f2, aux_array)
         f1.close()
@@ -80,7 +80,7 @@ class Reidentify1B(object):
             """
 
     def metadata_input(self, metadata_list):
-        f = open('../example/metadata_input.txt', 'r')
+        f = open('../example/metadata_산업군.txt', 'r')
         while True:
             line = f.readline()
             if not line:
@@ -177,8 +177,8 @@ class Reidentify1B(object):
 
     def sim_numrange(self, aux, record):
         # 속성값이 10,000~20,000 처럼 범위형으로 들어오고 , \과 같은 특수문자가 들어온다면 제거해준다.
-        aux_pure = re.sub('[\$, ]', '', aux)
-        record_pure = re.sub('[\$, ]', '', record)
+        aux_pure = re.sub('[\$\[,]', '', aux)
+        record_pure = re.sub('[\$\[,]', '', record)
         # 10000~20000 등과 같을 때 1차원 배열 ( 10000 20000 ) 으로 문자를 치환 [~ => 띄어쓰기]
         aux_pure = re.sub('~', ' ', aux_pure)
         record_pure = re.sub('~', ' ', record_pure)
@@ -220,7 +220,7 @@ class Reidentify1B(object):
         for record in range(len(database)):
             for aux in range(len(aux_array)):
                 res = 0
-                for attribute in range(len(aux_array[aux])):
+                for attribute in range(len(metadata)):
                     #temp = (1 - att_list[attribute][database[record][attribute]]) * self.sim_case(aux_array[aux][attribute], database[record][attribute], metadata[attribute])
                     temp = self.sim_case(aux_array[aux][attribute], database[record][attribute], metadata[attribute])
                     if temp > 0:
