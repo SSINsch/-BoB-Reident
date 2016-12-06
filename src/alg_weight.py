@@ -15,7 +15,7 @@ class Reidentify1B(object):
         aux_array = []
         # open input files. f1=releasedD. f2=auxD
         f2 = open('../input_data/산업군_정보통신(비식별화)_alive.csv', 'r')
-        f1 = open('../input_data/산업군_교육(비식별화)_alive.csv', 'r')
+        f1 = open('../input_data/산업군_금융(비식별화)_alive.csv', 'r')
         self.readinput(f1, database)
         self.readinput(f2, aux_array)
         f1.close()
