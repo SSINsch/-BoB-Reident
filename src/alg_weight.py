@@ -7,20 +7,23 @@ from datetime import datetime
 
 # 가정: database D는 aux A에 순서에 의해 정렬되어 있으며, 정돈되어 있음.
 # 가정: 10대, 20대... 로 표시된 경우 '대'를 제거
-# 가정: 각 Database 공통적인 정보만을 남기고 열을 삭제한다. 이 떄, 원본 DB는 남겨놔야 이후 매칭이 가능. (이는 개선가능성이 있다.)
 
 class Reidentify1B(object):
     def __init__(self):
+        # f1 = releasedD(database). f2 = auxD(aux_array)
+        # score array = array for N(len_database) by M(len_aux_array)
+        # att_list: 각 attribute의 비율을 가지는 dictionary의 list
+        # metadata_list = array for metadata
+        # filter_list = [[0 for col in range(len(aux_array))] for row in range(len(database))]
+        # matching set is the dictation array which will contain (candidate, possibility)
         database = []
         aux_array = []
-        # open input files. f1=releasedD. f2=auxD
-        f2 = open('../input_data/산업군_정보통신(비식별화)_alive.csv', 'r')
-        f1 = open('../input_data/산업군_금융(비식별화)_alive.csv', 'r')
+        f1 = open('../input_data/기본공통속성데이터/기본데이터(비식별화)(name_delete)_alive.csv', 'r')
+        f2 = open('../input_data/기본공통속성데이터/기본데이터(원본).csv', 'r')
         self.readinput(f1, database)
         self.readinput(f2, aux_array)
         f1.close()
         f2.close()
-        # score array = array for N by M
         score = [[1 for col in range(len(aux_array))] for row in range(len(database))]
         att_list = [dict() for row in range(len(database[0]))]
         metadata_list = []
@@ -28,23 +31,26 @@ class Reidentify1B(object):
         self.metadata_input(metadata_list)
         print("get weight...")
         self.weight(database, att_list)
-        filter_list = [[0 for col in range(len(aux_array))] for row in range(len(database))]
+        filter_list = []
         print("get score...")
         self.score(database, aux_array, att_list, score, filter_list, metadata_list)
-        # matching set is the dictation array which will contain (candidate, possibility)
         matching = [dict() for row in range(len(database))]
         eccentricity = 0.00000001
         print("get matching...")
-        self.matching_set(score, eccentricity, matching, filter_list)
+        self.matching_set(score, eccentricity, matching)
         self.print_candidate_name(database, aux_array, matching)
         self.print_percentage_result(database, aux_array, matching)
 
-    def matching_set(self, input_array, eccentricity, output_array, filter_list):
+    # matching set을 구하는 함수.
+    # input_array: 입력으로 들어오는 score 배열
+    # eccentricity: 유의미한 차이 alpha
+    # output_array: 출력, 즉 matching set 배열
+    def matching_set(self, input_array, eccentricity, output_array):
         for row in range(len(input_array)):
             maximum = max(input_array[row])
             temp = input_array[row][:]
-
             temp.remove(maximum)
+            # maximum 값과 second maximum 값을 구한다.
             while True:
                 try:
                     second_maximum = max(temp)
@@ -57,6 +63,8 @@ class Reidentify1B(object):
                     second_maximum = 0
                     deviation = 1
                     break
+            # 그 후, maximum 값과 second maximum 값이 유의미한 차이를 보이고
+            # 해당 maximum을 값으로 후보를 모두 matching set에 입력
             if (maximum - second_maximum) / deviation >= eccentricity:
                 while True:
                     output_array[row][input_array[row].index(maximum)] = maximum
@@ -67,20 +75,10 @@ class Reidentify1B(object):
                             break
                     except:
                         break
-            """
-            for i in range(5):
-                try:
-                    if filter_list[row][input_array[row].index(maximum)] != max(filter_list[row]):
-                        pass
-                    output_array[row][input_array[row].index(maximum)] = maximum
-                    temp.remove(maximum)
-                    maximum = max(temp)
-                except:
-                    continue
-            """
 
+    # metadata 입력 함수
     def metadata_input(self, metadata_list):
-        f = open('../example/metadata_산업군.txt', 'r')
+        f = open('../example/metadata_input.txt', 'r')
         while True:
             line = f.readline()
             if not line:
@@ -90,6 +88,7 @@ class Reidentify1B(object):
         for i in range(len(metadata_list)):
             metadata_list[i] = metadata_list[i].replace('\n', '')
 
+    # 모든 매칭셋을 출력하는 함수
     def print_candidate_name(self, database, aux_array, matching):
         f = open('../result_candidate.txt', 'w')
         for row in range(len(database)):
@@ -100,6 +99,8 @@ class Reidentify1B(object):
             f.write('\n')
         f.close()
 
+    # 매칭셋을 토대로 맞춘 후보만을 출력하고 percentage를 계산
+    # 이 때, 최고 유사율을 보이는 후보가 하나일때만 정답이라고 계산한다
     def print_percentage_result(self, database, aux_array, matching):
         f = open('../result_percentage.txt', 'w')
         f.write('CORRECT LIST\n')
@@ -119,6 +120,7 @@ class Reidentify1B(object):
         f.write('percentage: ' + str((correct_num * 100) / targets) + '%')
         f.close()
 
+    # csv로부터 입력받는 함수
     def readinput(self, file_handler, output_matrix):
         csv_reader = csv.reader(file_handler)
         iter_csv = iter(csv_reader)
@@ -126,6 +128,10 @@ class Reidentify1B(object):
         for row in csv_reader:
             output_matrix.append(row)
 
+    # 유사도 측정 케이스 함수. 입력된 metadata에 따라 연산이 달라진다.
+    # aux: Aux 배열의 한 행
+    # record: Database 배열의 한 행
+    # metadata: metadata
     def sim_case(self, aux, record, metadata):
         if metadata == 'index':
             return 0
@@ -138,6 +144,7 @@ class Reidentify1B(object):
         elif metadata == 'date':
             return self.sim_date(aux, record)
 
+    # 단일 숫자 유사율 계산
     def sim_num(self, aux, record):
         try:
             aux_pure = int(aux)
@@ -152,6 +159,7 @@ class Reidentify1B(object):
             return 0
         return 1 - diff/record_pure
 
+    # 날짜 데이터 유사율 계산
     def sim_date(self, aux, record):
         try:
             aux_date = datetime.strptime(aux, '%Y-%m-%d')
@@ -169,12 +177,14 @@ class Reidentify1B(object):
         else:
             return 0
 
+    # 문자열 유사율 계산. Levenshtein 알고리즘을 이용
     def sim_string(self, aux, record):
         # case string: levenshtein distance
         error = Levenshtein.distance(str(record), str(aux))
         length = len(str(record)) if len(str(record)) > len(str(aux)) else len(str(aux))
         return 1 - (error / length)
 
+    # 범위형 숫자 유사율 계산
     def sim_numrange(self, aux, record):
         # 속성값이 10,000~20,000 처럼 범위형으로 들어오고 , \과 같은 특수문자가 들어온다면 제거해준다.
         aux_pure = re.sub('[\$\[,]', '', aux)
@@ -216,18 +226,28 @@ class Reidentify1B(object):
         length = (record_pure[1] - record_pure[0] + 1) if (record_pure[1] - record_pure[0]) > (record_pure[1] - record_pure[0]) else (record_pure[1] - record_pure[0] + 1)
         return match / length
 
+    # score를 계산하는 함수. 내부에서 sim_case 함수를 통해 케이스가 나누어진다.
+    # database: 입력으로 들어오는 비식별 처리된 database
+    # aux_array: 입력으로 들어오는 알려진 database (물론 또다른 비식별 처리된 database여도 된다.)
+    # att_list: 각 attribute의 비율을 가지는 dictionary의 list
+    # output: score 배열을 출력
+    # filter_list: 필터링 배열. 이로써 일치하는 속성의 갯수가 최대갯수가 아니라면 해당 후보를 제외하는 효과가 있음
+    # metadata: metadata
     def score(self, database, aux_array, att_list, output, filter_list, metadata):
         for record in range(len(database)):
             for aux in range(len(aux_array)):
                 res = 0
                 for attribute in range(len(metadata)):
-                    #temp = (1 - att_list[attribute][database[record][attribute]]) * self.sim_case(aux_array[aux][attribute], database[record][attribute], metadata[attribute])
-                    temp = self.sim_case(aux_array[aux][attribute], database[record][attribute], metadata[attribute])
+                    temp = (1 - att_list[attribute][database[record][attribute]]) * self.sim_case(aux_array[aux][attribute], database[record][attribute], metadata[attribute])
+                    # temp = self.sim_case(aux_array[aux][attribute], database[record][attribute], metadata[attribute])
                     if temp > 0:
                         filter_list[record][aux] += 1
                     res += temp
                 output[record][aux] = round(res, 4)
 
+    # 가중치 계산 함수.releaseD 내의 각 속성마다 값의 분포를 구하여 att_list에 저장한다.
+    # releaseD: 입력으로 들어오는 비식별 처리된 database
+    # att_list: 각 attribute의 비율을 가지는 dictionary의 list
     def weight(self, releaseD, att_list):
         att_num = len(releaseD[0])
         record_num = len(releaseD)

@@ -13,7 +13,7 @@ from PyQt5.QtCore import *
 class Reident(QDialog):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
-        self.ui = uic.loadUi("de-anony_tools_new.ui")
+        self.ui = uic.loadUi("../UI/de-anony_tools.ui")
         database = []
         aux_array = []
         att_list = []
@@ -31,17 +31,19 @@ class Reident(QDialog):
 
     def printCorrectPercentage(self, textbrowser, database, aux_array, matching):
         f = open('temp.txt', 'w')
+        f.write('CORRECT LIST\n')
 	#textbrowser.clear()
         correct_num = 0
         targets = len(database)
         for row in range(targets):
-            try:
-                if database[row][0] == aux_array[max(matching[row], key=matching[row].get)][0]:
+            if database[row][0] == aux_array[max(matching[row], key=matching[row].get)][0]:
+                temp = list(matching[row].values())
+                len_list = len(temp)
+                temp = list(set(temp))
+                len_set = len(temp)
+                if len_list == len_set:
                     correct_num += 1
-                if database[row][0] != aux_array[max(matching[row], key=matching[row].get)][0]:
-                    f.write(str(database[row])+'\n')
-            except:
-                pass
+                    f.write(str(database[row]) + '\n')
         f.write('total: ' + str(targets))
         f.write('correct: ' + str(correct_num))
         f.write('percentage: ' + str((correct_num * 100) / targets) + '%')
@@ -50,7 +52,7 @@ class Reident(QDialog):
         #textbrowser.append('percentage: ' + str((correct_num * 100) / targets) + '%')
 
     def testSave(self, textBrowser_result):
-        fname = QFileDialog.getSaveFileName(self, 'Save file', 'C:\\Users\shin\\Documents\\GitHub\\reident_project\\ex_result\\made_info')
+        fname = QFileDialog.getSaveFileName(self, 'Save file')
         fhandle = open(fname[0], 'w')
         fhandle.write(textBrowser_result.toPlainText())
         fhandle.close()
@@ -165,8 +167,7 @@ class Reident(QDialog):
                 output_matrix[row].append(1)
 
     def fileOpen(self, output_matrix, textbrowser):
-        fname = QFileDialog.getOpenFileName(self, 'Open file',
-                                            'C:\\Users\\shin\\PycharmProjects\\netflix\\input_data', '(*.csv)')
+        fname = QFileDialog.getOpenFileName(self, 'Open file', '../input_data', '(*.csv)')
         if fname[0]:
             f = open(fname[0], 'r')
             with f:

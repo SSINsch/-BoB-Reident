@@ -4,6 +4,7 @@ import sys
 import csv
 import re
 import Levenshtein
+import statistics
 from datetime import datetime
 from PyQt5 import uic
 from PyQt5.QtWidgets import *
@@ -86,13 +87,30 @@ class Reident(QDialog):
         for row in range(len(input_array)):
             maximum = max(input_array[row])
             temp = input_array[row][:]
-            for i in range(5):
+
+            temp.remove(maximum)
+            while True:
                 try:
-                    output_array[row][input_array[row].index(maximum)] = maximum
-                    temp.remove(maximum)
-                    maximum = max(temp)
+                    second_maximum = max(temp)
+                    if second_maximum == maximum:
+                        temp.remove(second_maximum)
+                    else:
+                        deviation = statistics.stdev(input_array[row])
+                        break
                 except:
-                    continue
+                    second_maximum = 0
+                    deviation = 1
+                    break
+            if (maximum - second_maximum) / deviation >= eccentricity:
+                while True:
+                    output_array[row][input_array[row].index(maximum)] = maximum
+                    input_array[row].remove(maximum)
+                    try:
+                        maximum = max(input_array[row])
+                        if maximum == second_maximum:
+                            break
+                    except:
+                        break
 
     def runFunction(self, textbrowser_percentage, textbrowser_result, database, aux_array, att_list, score_list, matching_list, filter, metadata):
         textbrowser_result.append("de-anonymization alg is running ...")
